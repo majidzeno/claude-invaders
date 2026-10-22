@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { W, cadence, fire, moveShip, newGame, step } from '../hooks/game'
-import { svgAlt, svgField } from '../hooks/sprites'
+import { ASPECT, fit, svgAlt, svgField } from '../hooks/sprites'
 
 test('a shot takes the invader above it and scores', () => {
   const start = newGame()
@@ -85,4 +85,15 @@ test('a finished game draws the wreck and stops the wave bobbing', () => {
 
   expect(source.includes('href="#wreck"')).toBe(true)
   expect(source.includes('animateTransform')).toBe(false)
+})
+
+test('the box handed to the surface keeps the field in shape', () => {
+  const short = fit({ width: 800, height: 200 })
+  expect(short.height).toBeLessThanOrEqual(200)
+  expect(short.width).toBeLessThanOrEqual(800)
+  expect(Math.abs(short.width / short.height - ASPECT)).toBeLessThan(0.02)
+
+  const narrow = fit({ width: 300, height: 900 })
+  expect(narrow.width).toBe(300)
+  expect(Math.abs(narrow.width / narrow.height - ASPECT)).toBeLessThan(0.02)
 })

@@ -40,9 +40,16 @@ composer is empty, left and right steer the cannon, space or up fires, and those
 keys are consumed so the caret never moves. Type anything into the box and the
 keys are yours again, untouched.
 
-The buttons under the field do the same, by mouse, anywhere. Each also carries a
-letter for when the pane itself holds the keyboard (click it, or `ctrl+x` then
-`tab`).
+The pane never asks for the keyboard, because a pane that holds it swallows the
+arrows — they scroll it. Leave the cursor where it sits, in the prompt box.
+
+The buttons under the field do the same work by mouse, anywhere. Each also
+carries a letter for when the pane itself holds the keyboard (click it, or
+`ctrl+x` then `tab`), which is the one time the arrows stop steering.
+
+The field is drawn into the room the pane reports (`bodyColumns` by
+`scroll.bodyRows`), cut to its own shape, so the whole wave is on screen
+whatever height the pane has.
 
 | Key       | Button  | What it does               |
 | --------- | ------- | -------------------------- |

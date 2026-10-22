@@ -69,6 +69,16 @@ const FIELD_W = W * CELL
 const FIELD_H = H * CELL
 const TOTAL_H = HEAD + FIELD_H + 10
 
+/** The field's shape, so a caller can hand the element a box that matches it. */
+export const ASPECT = FIELD_W / TOTAL_H
+
+/** The largest box of the field's own shape that fits in the room given. */
+export function fit(room: { width: number; height: number }): { width: number; height: number } {
+  const width = Math.round(Math.min(room.width, room.height * ASPECT))
+
+  return { width, height: Math.round(width / ASPECT) }
+}
+
 const INK = {
   i0: '#5de07a',
   i1: '#62d4ff',
@@ -202,7 +212,9 @@ export function svgField(game: Game, hi: number): string {
       ? ''
       : '<animateTransform attributeName="transform" type="translate" values="0 0; 0 1.6; 0 0" dur="0.9s" repeatCount="indefinite"/>'
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${FIELD_W}" height="${TOTAL_H}" viewBox="0 0 ${FIELD_W} ${TOTAL_H}" role="img">
+  // No width or height of its own: the element is given a box in pixels and
+  // the viewBox fits the whole field inside it, however short the pane is.
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${FIELD_W} ${TOTAL_H}" preserveAspectRatio="xMidYMid meet" role="img">
 <defs>${defs()}
 <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a0d1c"/><stop offset="1" stop-color="#05060d"/></linearGradient>
 </defs>

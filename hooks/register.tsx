@@ -5,11 +5,17 @@ import type { Game } from '../types'
 
 import { field, scoreboard, spans } from './draw'
 import { W, fire, moveShip, newGame, paused, step } from './game'
-import { svgAlt, svgField } from './sprites'
+import { fit, svgAlt, svgField } from './sprites'
 
 const PANE = 'invaders'
 const TICK_MS = 200
-const HINT = '← → steer · space fires · p pauses'
+const PANE_ROWS = 22
+const HINT = '← → steer · space fires · keep the cursor in the prompt box'
+
+// A key probe: the composer is the one site that reports a key to a hook, so
+// if the arrows never arrive these lines say what did.
+const PROBE = 12
+let probed = 0
 
 const game = atom({ plugin: 'idle-invaders', key: 'game' } as const, null)
 const hi = atom({ plugin: 'idle-invaders', key: 'hi' } as const, 0)
@@ -117,7 +123,7 @@ export const register: Register = on => {
     await update($, isBusy, () => true)
     await arm($, false)
 
-    const seat = await $.ui.open({ id: PANE, title: 'Invaders' })
+    const seat = await $.ui.open({ id: PANE, title: 'Invaders', rows: PANE_ROWS })
     if (seat.isPlaced) {
       startLoop($)
     } else {
@@ -158,6 +164,11 @@ export const register: Register = on => {
     if (!isLive || e.text !== '' || key === undefined) return next(e)
     if (key.ctrl === true || key.meta === true) return next(e)
 
+    if (probed < PROBE) {
+      probed += 1
+      say($, `the composer reported the key "${key.key}"`)
+    }
+
     const dx = key.key === 'left' ? -1 : key.key === 'right' ? 1 : 0
     const isFire = key.key === 'up' || key.key === 'space' || key.key === ' '
     if (dx === 0 && !isFire) return next(e)
@@ -188,7 +199,9 @@ export const register: Register = on => {
     }
 
     await arm($, arg === 'new')
-    const seat = await $.ui.open({ id: PANE, title: 'Invaders', focus: true })
+    // No `focus`: a focused pane swallows the arrows (they scroll it), and the
+    // composer is the only site that reports a key to a hook.
+    const seat = await $.ui.open({ id: PANE, title: 'Invaders', rows: PANE_ROWS })
     if (seat.isPlaced) startLoop($)
 
     return {
@@ -274,10 +287,26 @@ export const register: Register = on => {
 
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
 
+    // The pane says its room in cells; the SVG takes a box of about that many
+    // pixels, less the rows the note and the buttons need, and fits itself in.
+    // A surface that stretches the box would squash the sprites, so the box is
+    // cut to the field's own shape before it is handed over.
+    const roomRows = Math.max(6, (e.props.scroll.bodyRows ?? 20) - 4)
+    const box = fit({
+      width: Math.min(900, Math.max(260, e.props.bodyColumns * 7)),
+      height: Math.max(130, roomRows * 16),
+    })
+
     return (
-      <Box flexDirection="column" gap={1}>
+      <Box flexDirection="column">
         {held !== null && (
-          <Svg source={svgField(held, top)} alt={svgAlt(held)} isInteractive />
+          <Svg
+            source={svgField(held, top)}
+            alt={svgAlt(held)}
+            width={box.width}
+            height={box.height}
+            isInteractive
+          />
         )}
         <Text dimColor>{note}</Text>
         <Box gap={1}>
