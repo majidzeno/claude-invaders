@@ -17,7 +17,28 @@ const isAuto = atom({ plugin: 'claude-invaders', key: 'isAuto' } as const, true)
 export const register: Register = on => {
   let timer: Timer | null = null
   let best = 0
-  let hasWarned = false
+  let isListed = false
+  let hasLoaded = false
+
+  const say = ($: EngineInterface, line: string): void => {
+    $.ui.log(`invaders: ${line}`)
+  }
+
+  /**
+   * The slash command, registered from whichever hook runs first. A mod loaded
+   * into a session already under way may never see `session.start`, so this
+   * cannot be the only place it is asked for.
+   */
+  const ensureCommand = async ($: EngineInterface): Promise<void> => {
+    if (isListed) return
+    isListed = true
+    const listed = await $.command.register({
+      name: 'invaders',
+      description: 'Play Invaders in a pane while Claude works',
+      argumentHint: 'on | off | new',
+    })
+    say($, `/${listed.command} is listed`)
+  }
 
   const stopLoop = (): void => {
     timer?.cancel()
@@ -27,6 +48,8 @@ export const register: Register = on => {
   const advance = async ($: EngineInterface): Promise<void> => {
     const now = await update($, game, held => (held === null ? held : step(held)))
     if (now === null) return
+
+    $.ui.status(`invaders ${now.score}`)
 
     if (now.score > best) {
       best = now.score
@@ -50,11 +73,7 @@ export const register: Register = on => {
   }
 
   on('session.start', async ($, e, next) => {
-    await $.command.register({
-      name: 'invaders',
-      description: 'Play Invaders in a pane while Claude works',
-      argumentHint: 'on | off | new',
-    })
+    await ensureCommand($)
 
     const kept = Number((await $.store.get('hi')) ?? 0)
     best = Number.isFinite(kept) ? kept : 0
@@ -72,15 +91,21 @@ export const register: Register = on => {
     if (e.agentId !== undefined) return started
     if (!(await read($, isAuto))) return started
 
+    await ensureCommand($)
     await update($, isBusy, () => true)
     await arm($, false)
 
     const seat = await $.ui.open({ id: PANE, title: 'Invaders' })
     if (seat.isPlaced) {
       startLoop($)
-    } else if (!hasWarned) {
-      hasWarned = true
-      $.ui.toast(`Invaders needs a wider window (${seat.reason}); /invaders opens it anyway.`)
+    } else {
+      $.ui.toast(`Invaders is open but undrawn: ${seat.reason}. Try /invaders.`)
+      say($, `the pane was not placed: ${seat.reason}`)
+    }
+
+    if (!hasLoaded) {
+      hasLoaded = true
+      say($, 'the mod is live and hooked on this turn')
     }
 
     return started
@@ -92,6 +117,7 @@ export const register: Register = on => {
     if (e.agentId !== undefined) return done
 
     stopLoop()
+    $.ui.status(undefined)
     await update($, isBusy, () => false)
     await update($, game, held => (held === null ? held : paused(held, true)))
 
