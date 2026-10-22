@@ -1,6 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { W, cadence, fire, moveShip, newGame, step } from '../hooks/game'
+import { svgAlt, svgField } from '../hooks/sprites'
 
 test('a shot takes the invader above it and scores', () => {
   const start = newGame()
@@ -64,4 +65,24 @@ test('a paused or finished game does not move', () => {
 
   const over = { ...newGame(), isOver: true }
   expect(step(over)).toBe(over)
+})
+
+test('the svg field draws every invader, the ship and the score', () => {
+  const start = newGame()
+  const source = svgField(start, 900)
+
+  const used = source.match(/<use /g) ?? []
+  expect(used.length).toBeGreaterThanOrEqual(start.invaders.length + 1)
+  expect(source.includes('href="#ship"')).toBe(true)
+  expect(source.includes('HI 900')).toBe(true)
+  expect(source.length).toBeLessThan(131072)
+  expect(svgAlt(start).includes('wave 1')).toBe(true)
+})
+
+test('a finished game draws the wreck and stops the wave bobbing', () => {
+  const over = { ...newGame(), isOver: true }
+  const source = svgField(over, 0)
+
+  expect(source.includes('href="#wreck"')).toBe(true)
+  expect(source.includes('animateTransform')).toBe(false)
 })

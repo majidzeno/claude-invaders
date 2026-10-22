@@ -25,13 +25,20 @@ test('a turn opens the pane and it plays on every surface', async ($, on) => {
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
   await $.turn.start({ text: 'build me a thing', turnId: 'turn-1' })
 
-  for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {
+  // The terminal draws a field of characters; every other surface draws the SVG.
+  const chars = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await chars.find({ type: 'Text', text: /SCORE 0/ })).toBeDefined()
+  await chars.press({ key: 'fire' })
+  expect(await chars.find({ type: 'Text', text: /\|/ })).toBeDefined()
+  await chars.unmount()
+
+  for (const surface of ['desktop', 'vscode', 'mobile'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
 
-    expect(await ui.find({ type: 'Text', text: /SCORE 0/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /Claude is working/ })).toBeDefined()
+    expect(await ui.find({ type: 'Svg' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /steer/ })).toBeDefined()
     await ui.press({ key: 'fire' })
-    expect(await ui.find({ type: 'Text', text: /\|/ })).toBeDefined()
+    await ui.press({ key: 'right' })
 
     await ui.unmount()
   }
