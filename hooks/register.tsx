@@ -9,69 +9,73 @@ import { W, fire, moveShip, newGame, paused, step } from './game'
 const PANE = 'invaders'
 const TICK_MS = 200
 
-const game = atom({ plugin: 'claude-invaders', key: 'game' } as const, null)
-const hi = atom({ plugin: 'claude-invaders', key: 'hi' } as const, 0)
-const isBusy = atom({ plugin: 'claude-invaders', key: 'isBusy' } as const, false)
-const isAuto = atom({ plugin: 'claude-invaders', key: 'isAuto' } as const, true)
+const game = atom({ plugin: 'idle-invaders', key: 'game' } as const, null)
+const hi = atom({ plugin: 'idle-invaders', key: 'hi' } as const, 0)
+const isBusy = atom({ plugin: 'idle-invaders', key: 'isBusy' } as const, false)
+const isAuto = atom({ plugin: 'idle-invaders', key: 'isAuto' } as const, true)
+
+// A reload starts these over, which is what they are for: the live timer and
+// the high score read back from the store. The game itself lives in $.state.
+let timer: Timer | null = null
+let best = 0
+let isListed = false
+
+// Every function a hook hands `$` to is declared here, at the top of the file:
+// the engine refuses a module that passes `$` into a closure made inside
+// `register`, and says so by naming the call it stopped at.
+
+function say($: EngineInterface, line: string): void {
+  $.ui.log(`invaders: ${line}`)
+}
+
+/**
+ * The slash command, asked for by whichever hook runs first. A mod loaded into
+ * a session already under way may never see `session.start`.
+ */
+async function ensureCommand($: EngineInterface): Promise<void> {
+  if (isListed) return
+  isListed = true
+  const listed = await $.command.register({
+    name: 'invaders',
+    description: 'Play Invaders in a pane while Claude works',
+    argumentHint: 'on | off | new',
+  })
+  say($, `/${listed.command} is listed`)
+}
+
+function stopLoop(): void {
+  timer?.cancel()
+  timer = null
+}
+
+async function advance($: EngineInterface): Promise<void> {
+  const now = await update($, game, held => (held === null ? held : step(held)))
+  if (now === null) return
+
+  $.ui.status(`invaders ${now.score}`)
+
+  if (now.score > best) {
+    best = now.score
+    await update($, hi, () => best)
+    await $.store.set('hi', best)
+  }
+  if (now.isOver || now.isPaused) stopLoop()
+}
+
+function startLoop($: EngineInterface): void {
+  if (timer !== null) return
+  timer = $.clock.every(TICK_MS, () => void advance($))
+}
+
+/** Puts a playable game in state: a fresh one, or the held one unpaused. */
+async function arm($: EngineInterface, isFresh: boolean): Promise<void> {
+  const seed = await $.clock.now()
+  await update($, game, held =>
+    isFresh || held === null || held.isOver ? newGame(1, seed) : paused(held, false),
+  )
+}
 
 export const register: Register = on => {
-  let timer: Timer | null = null
-  let best = 0
-  let isListed = false
-  let hasLoaded = false
-
-  const say = ($: EngineInterface, line: string): void => {
-    $.ui.log(`invaders: ${line}`)
-  }
-
-  /**
-   * The slash command, registered from whichever hook runs first. A mod loaded
-   * into a session already under way may never see `session.start`, so this
-   * cannot be the only place it is asked for.
-   */
-  const ensureCommand = async ($: EngineInterface): Promise<void> => {
-    if (isListed) return
-    isListed = true
-    const listed = await $.command.register({
-      name: 'invaders',
-      description: 'Play Invaders in a pane while Claude works',
-      argumentHint: 'on | off | new',
-    })
-    say($, `/${listed.command} is listed`)
-  }
-
-  const stopLoop = (): void => {
-    timer?.cancel()
-    timer = null
-  }
-
-  const advance = async ($: EngineInterface): Promise<void> => {
-    const now = await update($, game, held => (held === null ? held : step(held)))
-    if (now === null) return
-
-    $.ui.status(`invaders ${now.score}`)
-
-    if (now.score > best) {
-      best = now.score
-      await update($, hi, () => best)
-      await $.store.set('hi', best)
-    }
-    if (now.isOver || now.isPaused) stopLoop()
-  }
-
-  const startLoop = ($: EngineInterface): void => {
-    if (timer !== null) return
-    timer = $.clock.every(TICK_MS, () => void advance($))
-  }
-
-  /** Puts a playable game in state: a fresh one, or the held one unpaused. */
-  const arm = async ($: EngineInterface, isFresh: boolean): Promise<void> => {
-    const seed = await $.clock.now()
-    await update($, game, held =>
-      isFresh || held === null || held.isOver ? newGame(1, seed) : paused(held, false),
-    )
-  }
-
   on('session.start', async ($, e, next) => {
     await ensureCommand($)
 
@@ -89,9 +93,10 @@ export const register: Register = on => {
   on('turn.start', async ($, e, next) => {
     const started = await next(e)
     if (e.agentId !== undefined) return started
-    if (!(await read($, isAuto))) return started
 
     await ensureCommand($)
+    if (!(await read($, isAuto))) return started
+
     await update($, isBusy, () => true)
     await arm($, false)
 
@@ -99,13 +104,7 @@ export const register: Register = on => {
     if (seat.isPlaced) {
       startLoop($)
     } else {
-      $.ui.toast(`Invaders is open but undrawn: ${seat.reason}. Try /invaders.`)
       say($, `the pane was not placed: ${seat.reason}`)
-    }
-
-    if (!hasLoaded) {
-      hasLoaded = true
-      say($, 'the mod is live and hooked on this turn')
     }
 
     return started
@@ -222,10 +221,10 @@ export const register: Register = on => {
         ))}
         <Text color={held.isOver ? 'red' : busy ? 'yellow' : 'cyan'}>{note}</Text>
         <Box gap={1}>
-          <Button key="left" hotkey="a" plain onPress={press(held => moveShip(held, -1))}>
+          <Button key="left" hotkey="a" plain onPress={press(now => moveShip(now, -1))}>
             {'<'}
           </Button>
-          <Button key="right" hotkey="d" plain onPress={press(held => moveShip(held, 1))}>
+          <Button key="right" hotkey="d" plain onPress={press(now => moveShip(now, 1))}>
             {'>'}
           </Button>
           <Button key="fire" hotkey="f" plain onPress={press(fire)}>

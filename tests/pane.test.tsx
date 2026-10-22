@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 const PANE = {
-  plugin: 'claude-invaders',
+  plugin: 'idle-invaders',
   component: 'Pane',
   requestId: 'invaders',
   props: {

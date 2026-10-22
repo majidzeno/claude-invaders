@@ -1,5 +1,5 @@
 {
-  "name": "claude-invaders",
+  "name": "idle-invaders",
   "owner": { "name": "majidzeno" },
-  "plugins": [{ "name": "claude-invaders", "source": "./" }]
+  "plugins": [{ "name": "idle-invaders", "source": "./" }]
 }

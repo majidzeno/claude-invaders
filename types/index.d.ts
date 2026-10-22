@@ -25,7 +25,7 @@ export type Game = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'claude-invaders': {
+    'idle-invaders': {
       game: Game | null
       hi: number
       isBusy: boolean

@@ -1,4 +1,4 @@
-# Claude Invaders
+# Idle Invaders
 
 A Space Invaders pane for [Claude Code](https://claude.com/claude-code). It opens
 on its own when Claude starts working and holds the wave the moment the answer
@@ -27,18 +27,18 @@ the desktop app, in the VS Code panel and on mobile.
 At the prompt of a terminal session:
 
 ```
-/plugin install claude-invaders --marketplace majidzeno/claude-invaders
+/plugin install idle-invaders --marketplace majidzeno/idle-invaders
 ```
 
 Answer `y` to add the marketplace, then pick a scope (the user scope is first;
 Enter takes it). In the desktop app, where `/plugin` does not run: click **+**
 next to the prompt box, then **Plugins**, **Add marketplace** with
-`majidzeno/claude-invaders`, then **Add plugin**.
+`majidzeno/idle-invaders`, then **Add plugin**.
 
 From a shell:
 
 ```
-claude plugin install claude-invaders --marketplace majidzeno/claude-invaders
+claude plugin install idle-invaders --marketplace majidzeno/idle-invaders
 ```
 
 Requires a Claude Code build with the `session.start` and `command.run` function
@@ -103,7 +103,7 @@ is placed: when Claude answers, the timer is cancelled.
 ## Developing
 
 ```sh
-claude --plugin-dir /path/to/claude-invaders
+claude --plugin-dir /path/to/idle-invaders
 ```
 
 An interactive session watches the folder and reloads the module when a file is

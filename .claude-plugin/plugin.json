@@ -1,10 +1,10 @@
 {
-  "name": "claude-invaders",
+  "name": "idle-invaders",
   "version": "0.1.0",
   "description": "A Space Invaders pane that opens while Claude works, so there is something to do until the answer lands.",
   "types": "./types/index.d.ts",
   "author": {
     "name": "majidzeno"
   },
-  "homepage": "https://github.com/majidzeno/claude-invaders"
+  "homepage": "https://github.com/majidzeno/idle-invaders"
 }
